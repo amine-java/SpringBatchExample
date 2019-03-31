@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:batch="http://www.springframework.org/schema/batch"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<import resource="commons.xml" />
+
+	<batch:job id="extractProductsForConversion">
+		<batch:step id="stepConversionProduct">
+			<batch:tasklet>
+				<batch:chunk reader="productConversionReader"
+					processor="productConversionProcessor" writer="productConversionWriter"
+					commit-interval="2">
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+	<bean id="productConversionReader" parent="productReader">
+		<property name="linesToSkip" value="1"></property>
+		<property name="resource" value="classpath:output/out.txt"></property>
+		<property name="lineMapper">
+			<bean
+				class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+				<property name="fieldSetMapper"
+					ref="productConversionFieldSetMapper"></property>
+
+				<property name="lineTokenizer">
+					<bean
+						class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<property name="delimiter" value=";" />
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="productConversionFieldSetMapper"
+		class="com.mbh.products.reader.mapper.ProductConversionFieldSetMapper"></bean>
+
+	<bean id="productWriterConversion" parent="productWriter">
+		<property name="resource"
+			value="file:src/main/resources/output/out2.txt"></property>
+	</bean>
+
+	<bean id="dollarsToEurosConverter"
+		class="com.mbh.currency.services.DollarsToEurosConverter"></bean>
+
+	<bean id="productConversionProcessor"
+		class="com.mbh.products.processors.ProductConversionProcessor">
+		<property name="converter" ref="dollarsToEurosConverter"></property>
+	</bean>
+
+	<bean id="productConversionWriter" parent="productWriter">
+		<property name="resource" value="file:src/main/resources/output/results.txt"></property>
+	</bean>
+</beans>
